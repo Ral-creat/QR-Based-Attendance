@@ -1,62 +1,86 @@
 /* --- Page background --- */
 [data-testid="stAppViewContainer"] {
-    background-color: #ffe6f0; /* light pink background */
-    color: #333; /* dark text for contrast */
+    background-color: #ffeaf3; /* soft pink */
+    color: #222; /* dark gray text for readability */
+}
+
+/* --- General text --- */
+p, span, div {
+    color: #222 !important; /* force readable text color */
 }
 
 /* --- Headers --- */
 h1, h2, h3, h4, h5, h6 {
     color: #ff1493 !important; /* deep pink headers */
     text-shadow: none;
+    font-weight: 700;
 }
 
 /* --- Navigation buttons --- */
 .nav-btn {
     display: inline-block;
-    margin: 5px;
-    padding: 10px 20px;
-    background-color: #ff69b4; /* hot pink */
+    margin: 6px;
+    padding: 10px 22px;
+    background-color: #ff69b4; /* pink */
     color: white;
     border: none;
     border-radius: 12px;
     cursor: pointer;
-    font-weight: bold;
+    font-weight: 600;
     transition: 0.3s ease;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
 }
 .nav-btn:hover {
     background-color: #ff1493; /* darker pink hover */
     transform: scale(1.05);
 }
 
-/* --- DataFrames / Tables --- */
+/* --- Tables / DataFrames --- */
 [data-testid="stDataFrameContainer"] {
-    background-color: white !important;
+    background-color: #fff !important;
     border-radius: 12px;
     padding: 10px;
     box-shadow: 0px 0px 6px rgba(255, 182, 193, 0.6);
 }
+[data-testid="stTable"] {
+    color: #222 !important;
+}
 
 /* --- Sidebar --- */
 [data-testid="stSidebar"] {
-    background-color: white;
+    background-color: #fff;
     border-right: 3px solid #ffb6c1;
 }
 [data-testid="stSidebar"] h2 {
-    color: #ff69b4;
+    color: #ff1493;
 }
 
 /* --- Inputs and Buttons --- */
 .stButton>button {
     background-color: #ff69b4;
-    color: white;
+    color: #fff;
     border-radius: 10px;
     border: none;
     font-weight: 600;
     padding: 8px 20px;
-    transition: 0.2s;
+    transition: 0.2s ease;
 }
 .stButton>button:hover {
     background-color: #ff1493;
     transform: scale(1.05);
+}
+
+/* --- Select boxes, inputs, etc. --- */
+.stTextInput>div>div>input,
+.stSelectbox>div>div>select,
+.stDateInput>div>div>input {
+    background-color: #fff !important;
+    color: #222 !important;
+    border: 1px solid #ffb6c1;
+    border-radius: 8px;
+}
+
+/* --- Labels and small text --- */
+label, .stMarkdown, .stText {
+    color: #222 !important;
 }
