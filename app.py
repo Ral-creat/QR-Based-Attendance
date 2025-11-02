@@ -8,6 +8,7 @@ st.set_page_config(page_title="✨ Smart Attendance System", layout="wide", page
 # --- LOAD EXTERNAL CSS ---
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    
 # --- SIDEBAR: UPLOAD DATASET ---
 st.sidebar.header("📂 Upload Attendance File")
 uploaded_file = st.sidebar.file_uploader("CSV or Excel", type=["csv", "xlsx"])
