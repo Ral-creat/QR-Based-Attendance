@@ -1,47 +1,42 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Attendance Monitoring System", layout="wide")
+st.set_page_config(page_title="✨ Smart Attendance System", layout="wide", page_icon="🗓️")
 
 # --- SIDEBAR: UPLOAD DATASET ---
-st.sidebar.header("📂 Upload Attendance Dataset")
-
-uploaded_file = st.sidebar.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
+st.sidebar.header("📂 Upload Attendance File")
+uploaded_file = st.sidebar.file_uploader("CSV or Excel", type=["csv", "xlsx"])
 
 if uploaded_file:
     try:
-        if uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
+        df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
         df.columns = [c.strip().lower() for c in df.columns]
-        st.sidebar.success("✅ File uploaded successfully!")
+        st.sidebar.success("✅ File uploaded!")
     except Exception as e:
-        st.sidebar.error(f"❌ Error reading file: {e}")
+        st.sidebar.error(f"❌ Could not read file: {e}")
         st.stop()
 else:
     df = None
-    st.sidebar.info("📎 Please upload your attendance dataset.")
+    st.sidebar.info("📎 Upload a CSV or Excel file to continue.")
 
 # --- MAIN TITLE ---
-st.markdown("<h2 style='text-align:center;'>📊 Automated Attendance Monitoring System</h2>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray;'>Upload your attendance file from the sidebar to analyze class summaries, employee ratings, and visual analytics.</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4B0082;'>🗓️ Smart Attendance Monitoring</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray;'>Track attendance trends, streaks, and get alerts for absences or lateness.</p>", unsafe_allow_html=True)
 
 # --- TABS ---
-tab_class, tab_individual, tab_overall = st.tabs([
-    "🏫 Class Summary",
-    "👤 Individual Ratings",
-    "📈 Overall Analytics"
+tab_class, tab_individual, tab_overall, tab_trends, tab_heatmap = st.tabs([
+    "🏫 Class Overview", "👤 Individual Ratings", "📊 Overall Stats", "📈 Trends & Alerts", "🔥 Attendance Heatmap"
 ])
 
-# ==========================================================
-# 🏫 TAB 1: CLASS SUMMARY
-# ==========================================================
+# -------------------------------
+# TAB 1: CLASS OVERVIEW
+# -------------------------------
 with tab_class:
-    st.subheader("🏫 Class Attendance Overview")
-
+    st.subheader("🏫 Class-Level Attendance")
     if df is not None:
         required_cols = ["employee_id", "name", "status", "date"]
         if not all(col in df.columns for col in required_cols):
@@ -50,107 +45,111 @@ with tab_class:
             if "class" in df.columns:
                 selected_class = st.selectbox("🎓 Select Class", sorted(df["class"].unique()))
                 class_df = df[df["class"] == selected_class]
-
-                st.markdown(f"### 📋 Attendance Summary for **{selected_class}**")
                 st.dataframe(class_df, use_container_width=True, height=350)
-
-                # Summary stats
+                
                 class_summary = class_df["status"].value_counts().reset_index()
                 class_summary.columns = ["Status", "Count"]
-
                 col1, col2 = st.columns(2)
                 with col1:
-                    pie_chart = px.pie(class_summary, names="Status", values="Count", title="Status Distribution")
-                    st.plotly_chart(pie_chart, use_container_width=True)
+                    st.plotly_chart(px.pie(class_summary, names="Status", values="Count", title="Status Distribution"), use_container_width=True)
                 with col2:
-                    bar_chart = px.bar(class_summary, x="Status", y="Count", title="Attendance Count", color="Status")
-                    st.plotly_chart(bar_chart, use_container_width=True)
+                    st.plotly_chart(px.bar(class_summary, x="Status", y="Count", color="Status", title="Attendance Count"), use_container_width=True)
             else:
-                st.warning("⚠️ The dataset doesn’t include a 'class' column.")
+                st.warning("⚠️ Dataset has no 'class' column.")
     else:
-        st.info("⬅️ Upload a dataset in the sidebar to view this section.")
+        st.info("⬅️ Upload a dataset to visualize class attendance.")
 
-# ==========================================================
-# 👤 TAB 2: INDIVIDUAL RATINGS
-# ==========================================================
+# -------------------------------
+# TAB 2: INDIVIDUAL RATINGS
+# -------------------------------
 with tab_individual:
-    st.subheader("👤 Employee Attendance Ratings")
-
+    st.subheader("👤 Employee Attendance Rating & Streaks")
     if df is not None:
         rating_map = {"Absent": 1, "Late": 2, "On Time": 3}
         df["rating_score"] = df["status"].map(rating_map).fillna(0)
-
-        rating_summary = (
-            df.groupby(["employee_id", "name"])[["rating_score"]]
-            .mean()
-            .reset_index()
-            .sort_values(by="rating_score", ascending=False)
-        )
+        rating_summary = df.groupby(["employee_id", "name"])["rating_score"].mean().reset_index()
+        rating_summary = rating_summary.sort_values(by="rating_score", ascending=False)
 
         def label_rating(score):
-            if score >= 2.5:
-                return "Excellent"
-            elif score >= 1.8:
-                return "Good"
-            elif score >= 1:
-                return "Needs Improvement"
-            else:
-                return "Poor"
+            if score >= 2.5: return "🌟 Excellent"
+            elif score >= 1.8: return "👍 Good"
+            elif score >= 1: return "⚠️ Needs Improvement"
+            else: return "❌ Poor"
 
         rating_summary["Rating"] = rating_summary["rating_score"].apply(label_rating)
-
-        if "class" in df.columns:
-            emp_class = df.groupby(["employee_id", "name"])["class"].first().reset_index()
-            rating_summary = pd.merge(rating_summary, emp_class, on=["employee_id", "name"], how="left")
-
-        st.markdown("### ⭐ Rating Summary Table")
         st.dataframe(rating_summary, use_container_width=True, height=350)
 
-        st.markdown("### 🔎 View Individual Performance")
-        selected_emp = st.selectbox("Select Employee:", rating_summary["name"].unique())
+        selected_emp = st.selectbox("Select Employee", rating_summary["name"].unique())
+        emp_data = df[df["name"] == selected_emp].sort_values("date")
+        emp_data["date"] = pd.to_datetime(emp_data["date"])
+        
+        # Streak calculation
+        emp_data['on_time_flag'] = emp_data['status'] == 'On Time'
+        streak = 0
+        max_streak = 0
+        for flag in emp_data['on_time_flag']:
+            streak = streak + 1 if flag else 0
+            max_streak = max(max_streak, streak)
+        st.markdown(f"**Longest On-Time Streak:** {max_streak} days")
 
-        emp_data = df[df["name"] == selected_emp]
-        emp_chart = px.bar(
-            emp_data,
-            x="date",
-            y="status",
-            color="status",
-            title=f"Attendance Record for {selected_emp}",
-        )
-        st.plotly_chart(emp_chart, use_container_width=True)
+        st.plotly_chart(px.bar(emp_data, x="date", y="rating_score", color="status", title=f"{selected_emp}'s Attendance Trend"), use_container_width=True)
 
-        st.download_button(
-            label="⬇️ Download Ratings (CSV)",
-            data=rating_summary.to_csv(index=False).encode("utf-8"),
-            file_name="employee_ratings.csv",
-            mime="text/csv",
-        )
+        # Smart alerts
+        recent_status = emp_data.iloc[-1]["status"]
+        if recent_status == "Absent":
+            st.warning(f"⚠️ {selected_emp} was absent on {emp_data.iloc[-1]['date'].date()}")
+        elif recent_status == "Late":
+            st.info(f"⏰ {selected_emp} was late on {emp_data.iloc[-1]['date'].date()}")
     else:
-        st.info("⬅️ Upload a dataset in the sidebar to view ratings.")
+        st.info("⬅️ Upload a dataset to view ratings and streaks.")
 
-# ==========================================================
-# 📈 TAB 3: OVERALL ANALYTICS
-# ==========================================================
+# -------------------------------
+# TAB 3: OVERALL STATS
+# -------------------------------
 with tab_overall:
-    st.subheader("📈 Attendance Analytics Overview")
-
+    st.subheader("📊 Overall Attendance Stats")
     if df is not None:
         overall_summary = df["status"].value_counts().reset_index()
         overall_summary.columns = ["Status", "Count"]
-
         col1, col2 = st.columns(2)
         with col1:
-            pie_chart = px.pie(overall_summary, names="Status", values="Count", title="Overall Attendance Distribution")
-            st.plotly_chart(pie_chart, use_container_width=True)
+            st.plotly_chart(px.pie(overall_summary, names="Status", values="Count", title="Overall Status Distribution"), use_container_width=True)
         with col2:
-            bar_chart = px.bar(overall_summary, x="Status", y="Count", title="Overall Attendance Count", color="Status")
-            st.plotly_chart(bar_chart, use_container_width=True)
-
+            st.plotly_chart(px.bar(overall_summary, x="Status", y="Count", color="Status", title="Overall Attendance Count"), use_container_width=True)
+        
         if "class" in df.columns:
-            st.markdown("### 🏫 Class-Level Comparison")
             class_summary = df.groupby("class")["status"].value_counts().unstack().fillna(0)
             st.dataframe(class_summary, use_container_width=True, height=300)
-            class_chart = px.bar(class_summary, barmode="group", title="Class-Wise Attendance Comparison")
-            st.plotly_chart(class_chart, use_container_width=True)
+            st.plotly_chart(px.bar(class_summary, barmode="group", title="Class-Wise Attendance Comparison"), use_container_width=True)
     else:
-        st.info("⬅️ Upload a dataset in the sidebar to see analytics.")
+        st.info("⬅️ Upload a dataset to see overall analytics.")
+
+# -------------------------------
+# TAB 4: TRENDS & ALERTS
+# -------------------------------
+with tab_trends:
+    st.subheader("📈 Attendance Trends & Alerts")
+    if df is not None:
+        df["date"] = pd.to_datetime(df["date"])
+        trend_summary = df.groupby(["date", "status"]).size().reset_index(name="Count")
+        st.plotly_chart(px.line(trend_summary, x="date", y="Count", color="status", markers=True, title="Daily Attendance Trend"), use_container_width=True)
+
+        # Auto-alert top absentees
+        absences = df[df["status"] == "Absent"].groupby("name").size().sort_values(ascending=False).head(5)
+        st.markdown("### ⚠️ Top 5 Absentees")
+        st.table(absences)
+    else:
+        st.info("⬅️ Upload a dataset to see trends and alerts.")
+
+# -------------------------------
+# TAB 5: HEATMAP
+# -------------------------------
+with tab_heatmap:
+    st.subheader("🔥 Attendance Heatmap (Employee vs Date)")
+    if df is not None:
+        df_pivot = df.pivot_table(index="name", columns="date", values="status", aggfunc=lambda x: 1 if 'On Time' in x.values else 0).fillna(0)
+        plt.figure(figsize=(12,6))
+        sns.heatmap(df_pivot, cmap="YlGnBu", linewidths=.5, cbar_kws={"label": "On-Time Attendance"})
+        st.pyplot(plt)
+    else:
+        st.info("⬅️ Upload a dataset to see attendance heatmap.")
