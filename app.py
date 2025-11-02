@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="✨ Smart Attendance System", layout="wide", page_icon="🗓️")
@@ -15,13 +13,13 @@ if uploaded_file:
     try:
         df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
         df.columns = [c.strip().lower() for c in df.columns]
-        st.sidebar.success("✅ File uploaded!")
+        st.sidebar.success("✅ File uploaded successfully!")
     except Exception as e:
         st.sidebar.error(f"❌ Could not read file: {e}")
         st.stop()
 else:
     df = None
-    st.sidebar.info("📎 Upload a CSV or Excel file to continue.")
+    st.sidebar.info("📎 Upload a CSV or Excel file to start.")
 
 # --- MAIN TITLE ---
 st.markdown("<h1 style='text-align:center; color:#4B0082;'>🗓️ Smart Attendance Monitoring</h1>", unsafe_allow_html=True)
@@ -46,9 +44,10 @@ with tab_class:
                 selected_class = st.selectbox("🎓 Select Class", sorted(df["class"].unique()))
                 class_df = df[df["class"] == selected_class]
                 st.dataframe(class_df, use_container_width=True, height=350)
-                
+
                 class_summary = class_df["status"].value_counts().reset_index()
                 class_summary.columns = ["Status", "Count"]
+
                 col1, col2 = st.columns(2)
                 with col1:
                     st.plotly_chart(px.pie(class_summary, names="Status", values="Count", title="Status Distribution"), use_container_width=True)
@@ -67,6 +66,7 @@ with tab_individual:
     if df is not None:
         rating_map = {"Absent": 1, "Late": 2, "On Time": 3}
         df["rating_score"] = df["status"].map(rating_map).fillna(0)
+
         rating_summary = df.groupby(["employee_id", "name"])["rating_score"].mean().reset_index()
         rating_summary = rating_summary.sort_values(by="rating_score", ascending=False)
 
@@ -82,11 +82,10 @@ with tab_individual:
         selected_emp = st.selectbox("Select Employee", rating_summary["name"].unique())
         emp_data = df[df["name"] == selected_emp].sort_values("date")
         emp_data["date"] = pd.to_datetime(emp_data["date"])
-        
+
         # Streak calculation
         emp_data['on_time_flag'] = emp_data['status'] == 'On Time'
-        streak = 0
-        max_streak = 0
+        streak = max_streak = 0
         for flag in emp_data['on_time_flag']:
             streak = streak + 1 if flag else 0
             max_streak = max(max_streak, streak)
@@ -111,12 +110,13 @@ with tab_overall:
     if df is not None:
         overall_summary = df["status"].value_counts().reset_index()
         overall_summary.columns = ["Status", "Count"]
+
         col1, col2 = st.columns(2)
         with col1:
             st.plotly_chart(px.pie(overall_summary, names="Status", values="Count", title="Overall Status Distribution"), use_container_width=True)
         with col2:
             st.plotly_chart(px.bar(overall_summary, x="Status", y="Count", color="Status", title="Overall Attendance Count"), use_container_width=True)
-        
+
         if "class" in df.columns:
             class_summary = df.groupby("class")["status"].value_counts().unstack().fillna(0)
             st.dataframe(class_summary, use_container_width=True, height=300)
@@ -147,9 +147,13 @@ with tab_trends:
 with tab_heatmap:
     st.subheader("🔥 Attendance Heatmap (Employee vs Date)")
     if df is not None:
-        df_pivot = df.pivot_table(index="name", columns="date", values="status", aggfunc=lambda x: 1 if 'On Time' in x.values else 0).fillna(0)
-        plt.figure(figsize=(12,6))
-        sns.heatmap(df_pivot, cmap="YlGnBu", linewidths=.5, cbar_kws={"label": "On-Time Attendance"})
-        st.pyplot(plt)
+        df["date"] = pd.to_datetime(df["date"])
+        # Convert status to numeric for heatmap (On Time=1, Late/Absent=0)
+        df['on_time_flag'] = df['status'] == 'On Time'
+        heatmap_data = df.pivot_table(index='name', columns='date', values='on_time_flag', fill_value=0)
+        fig = px.imshow(heatmap_data, color_continuous_scale="YlGnBu",
+                        labels=dict(x="Date", y="Employee", color="On-Time Attendance"),
+                        title="🔥 Attendance Heatmap")
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("⬅️ Upload a dataset to see attendance heatmap.")
+        st.info("⬅️ Upload a dataset to see the heatmap.")
