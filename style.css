@@ -1,27 +1,43 @@
-/* style.css */
-.nav-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.nav-button {
-    background-color: #C62828;   /* Dark Red Theme */
+/* --- Page background gradient --- */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(to right, #ffb6c1, #800080, #ff69b4);
+    background-attachment: fixed;
     color: white;
-    padding: 10px 25px;
-    margin: 0 5px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
+}
+
+/* --- Headers --- */
+h1, h2, h3, h4, h5, h6 {
+    color: #fff0f5 !important;
+    text-shadow: 1px 1px 2px #4b0082;
+}
+
+/* --- Navigation buttons --- */
+.nav-btn {
+    display:inline-block;
+    margin:5px;
+    padding:10px 20px;
+    background: linear-gradient(45deg, #ff69b4, #800080);
+    color:white;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:bold;
     transition: 0.3s;
-    font-size: 16px;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+}
+.nav-btn:hover {
+    background: linear-gradient(45deg, #ff1493, #ba55d3);
+    transform: scale(1.05);
 }
 
-.nav-button:hover {
-    background-color: #E53935;   /* Lighter Red on Hover */
+/* --- DataFrames --- */
+[data-testid="stDataFrameContainer"] {
+    background-color: rgba(255,255,255,0.1) !important;
+    border-radius: 12px;
+    padding: 10px;
 }
 
-.nav-button:active {
-    transform: scale(0.95);
+/* --- Sidebar headers --- */
+[data-testid="stSidebar"] h2 {
+    color: #ff69b4;
 }
