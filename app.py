@@ -1,129 +1,117 @@
 import streamlit as st
-import cv2
 import pandas as pd
-import numpy as np
-from datetime import datetime, time
-from PIL import Image
-import sqlite3
 import plotly.express as px
 
-# ✅ Must be first Streamlit command
-st.set_page_config(page_title="QR Attendance System", layout="wide")
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="Attendance Monitoring System", layout="wide")
 
-# --- Database setup ---
-conn = sqlite3.connect("attendance.db", check_same_thread=False)
-c = conn.cursor()
+# --- TITLE ---
+st.title("📊 Employee Attendance Monitoring and Evaluation System")
+st.write("I-upload ang attendance dataset aron makita ang summary, rating, ug visual analysis.")
 
-# Create tables if not exist
-c.execute('''
-CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
-    name TEXT,
-    group_name TEXT
-)
-''')
+# --- FILE UPLOAD ---
+uploaded_file = st.file_uploader("📂 Upload Attendance CSV or Excel File", type=["csv", "xlsx"])
 
-c.execute('''
-CREATE TABLE IF NOT EXISTS attendance (
-    user_id TEXT,
-    name TEXT,
-    group_name TEXT,
-    date TEXT,
-    time_in TEXT,
-    status TEXT
-)
-''')
-conn.commit()
-
-# --- Layout ---
-st.title("📷 QR Code Attendance Monitoring System")
-st.write("I-scan ang imong QR code aron ma-record ang imong attendance sa database.")
-
-tab1, tab2, tab3 = st.tabs(["📸 Attendance", "👥 Manage Members", "📊 Summary Dashboard"])
-
-# --- Attendance Tab ---
-with tab1:
-    st.subheader("Real-Time QR Scanning")
-    camera_input = st.camera_input("📷 I-scan ang imong QR code diri")
-
-    official_time = time(8, 0, 0)  # 8:00 AM cutoff
-
-    if camera_input:
-        img = Image.open(camera_input)
-        img_np = np.array(img)
-
-        qr_detector = cv2.QRCodeDetector()
-        data, points, _ = qr_detector.detectAndDecode(img_np)
-
-        if data:
-            user_id = data.strip()
-            now = datetime.now()
-            date_today = now.strftime("%Y-%m-%d")
-            time_in = now.strftime("%H:%M:%S")
-            status = "On Time" if now.time() <= official_time else "Late"
-
-            c.execute("SELECT name, group_name FROM users WHERE user_id=?", (user_id,))
-            result = c.fetchone()
-
-            if result:
-                name, group_name = result
-                c.execute("SELECT * FROM attendance WHERE user_id=? AND date=?", (user_id, date_today))
-                if not c.fetchone():
-                    c.execute("INSERT INTO attendance VALUES (?, ?, ?, ?, ?, ?)",
-                              (user_id, name, group_name, date_today, time_in, status))
-                    conn.commit()
-                    st.success(f"✅ {name} ({group_name}) na-record as {status} at {time_in}")
-                else:
-                    st.info(f"🕒 {name} naka-scan na karon adlawa.")
-            else:
-                st.error("❌ Wala sa listahan ang QR code nga gi-scan.")
+if uploaded_file:
+    # --- READ FILE ---
+    try:
+        if uploaded_file.name.endswith(".csv"):
+            df = pd.read_csv(uploaded_file)
         else:
-            st.warning("😅 Wala nakit-an nga QR code. Sulayi balik.")
+            df = pd.read_excel(uploaded_file)
+    except Exception as e:
+        st.error(f"❌ Error reading file: {e}")
+        st.stop()
 
-# --- Manage Members Tab ---
-with tab2:
-    st.subheader("👥 I-manage ang mga miyembro")
+    st.success("✅ File successfully uploaded!")
 
-    with st.form("add_member"):
-        st.write("➕ Add new member")
-        user_id = st.text_input("User ID (QR content)")
-        name = st.text_input("Full Name")
-        group_name = st.text_input("Group / Section")
-        submitted = st.form_submit_button("Save")
+    # --- DISPLAY DATA ---
+    st.subheader("📋 Attendance Dataset")
+    st.dataframe(df, use_container_width=True)
 
-        if submitted:
-            if user_id and name and group_name:
-                try:
-                    c.execute("INSERT INTO users VALUES (?, ?, ?)", (user_id, name, group_name))
-                    conn.commit()
-                    st.success(f"✅ Successfully added {name}")
-                except:
-                    st.warning("⚠️ User ID already exists.")
-            else:
-                st.error("❌ Please fill out all fields.")
+    # --- CLEANING ---
+    df.columns = [c.strip().lower() for c in df.columns]  # normalize column names
 
+    # --- REQUIRED COLUMNS CHECK ---
+    required_cols = ["employee_id", "name", "status", "date"]
+    if not all(col in df.columns for col in required_cols):
+        st.error(f"⚠️ Missing columns. Required: {required_cols}")
+        st.stop()
+
+    # --- ANALYSIS ---
     st.divider()
-    st.write("📋 Registered Members:")
-    members = pd.read_sql("SELECT * FROM users", conn)
-    st.dataframe(members)
+    st.subheader("📈 Attendance Summary")
 
-# --- Summary Dashboard Tab ---
-with tab3:
-    st.subheader("📊 Attendance Summary")
+    # Count by status (On Time, Late, Absent, etc.)
+    status_summary = df["status"].value_counts().reset_index()
+    status_summary.columns = ["Status", "Count"]
 
-    data = pd.read_sql("SELECT * FROM attendance", conn)
-    if not data.empty:
-        st.write("📅 Attendance Records:")
-        st.dataframe(data)
+    col1, col2 = st.columns(2)
+    with col1:
+        fig1 = px.pie(status_summary, names="Status", values="Count", title="Attendance Distribution")
+        st.plotly_chart(fig1, use_container_width=True)
 
-        # Count status
-        count_df = data.groupby("status").size().reset_index(name="count")
-        fig = px.pie(count_df, names="status", values="count", title="Attendance Status Summary")
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Daily summary
-        daily = data.groupby("date").size().reset_index(name="scans")
-        fig2 = px.bar(daily, x="date", y="scans", title="Daily Attendance Count")
+    with col2:
+        fig2 = px.bar(status_summary, x="Status", y="Count", title="Total per Attendance Status")
         st.plotly_chart(fig2, use_container_width=True)
-    else:
-        st.info("No attendance records yet. Scan QR codes to start.")
+
+    # --- EMPLOYEE PERFORMANCE / RATING ---
+    st.divider()
+    st.subheader("⭐ Employee Attendance Rating")
+
+    # Rating formula (example: 1 = absent, 2 = late, 3 = on time)
+    rating_map = {"Absent": 1, "Late": 2, "On Time": 3}
+    df["rating_score"] = df["status"].map(rating_map).fillna(0)
+
+    rating_summary = (
+        df.groupby(["employee_id", "name"])["rating_score"]
+        .mean()
+        .reset_index()
+        .sort_values(by="rating_score", ascending=False)
+    )
+
+    # Convert numeric scores to text-based ratings
+    def rating_label(score):
+        if score >= 2.5:
+            return "Excellent"
+        elif score >= 1.8:
+            return "Good"
+        elif score >= 1:
+            return "Needs Improvement"
+        else:
+            return "Poor"
+
+    rating_summary["Rating"] = rating_summary["rating_score"].apply(rating_label)
+
+    st.dataframe(rating_summary, use_container_width=True)
+
+    # --- VISUALIZATION PER EMPLOYEE ---
+    st.divider()
+    st.subheader("📊 Attendance Over Time")
+
+    selected_employee = st.selectbox("Pili ug empleyado:", df["name"].unique())
+    emp_data = df[df["name"] == selected_employee]
+
+    fig3 = px.bar(
+        emp_data,
+        x="date",
+        y="status",
+        color="status",
+        title=f"Attendance History: {selected_employee}",
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+
+    # --- DOWNLOADABLE REPORT ---
+    st.divider()
+    st.subheader("📥 Export Report")
+
+    csv = rating_summary.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="⬇️ Download Employee Ratings (CSV)",
+        data=csv,
+        file_name="employee_ratings.csv",
+        mime="text/csv",
+    )
+
+else:
+    st.info("⬆️ Upload an attendance dataset to start analysis.")
