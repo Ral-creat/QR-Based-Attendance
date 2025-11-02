@@ -5,6 +5,24 @@ import plotly.express as px
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="✨ Smart Attendance System", layout="wide", page_icon="🗓️")
 
+# --- LOAD EXTERNAL CSS ---
+with open("style.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# --- MAIN TITLE ---
+st.markdown("<h1 style='text-align:center; color:#B71C1C;'>🗓️ Smart Attendance Monitoring</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray;'>Red-themed button navigation demo.</p>", unsafe_allow_html=True)
+
+# --- BUTTON NAVIGATION ---
+st.markdown("""
+<div class="nav-container">
+    <button class="nav-button">🏫 Class Overview</button>
+    <button class="nav-button">👤 Individual Ratings</button>
+    <button class="nav-button">📊 Overall Stats</button>
+    <button class="nav-button">📈 Trends & Alerts</button>
+    <button class="nav-button">🔥 Attendance Heatmap</button>
+</div>
+""", unsafe_allow_html=True)
 # --- SIDEBAR: UPLOAD DATASET ---
 st.sidebar.header("📂 Upload Attendance File")
 uploaded_file = st.sidebar.file_uploader("CSV or Excel", type=["csv", "xlsx"])
