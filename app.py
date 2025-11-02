@@ -4,6 +4,8 @@ import sqlite3
 import pandas as pd
 import numpy as np
 from datetime import datetime
+camera_input = st.camera_input("📷 I-scan ang imong QR code diri")
+
 if camera_input:
     img = Image.open(camera_input)
     img_np = np.array(img)
