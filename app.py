@@ -4,7 +4,41 @@ import sqlite3
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from pyzbar.pyzbar import decode
+if camera_input:
+    img = Image.open(camera_input)
+    img_np = np.array(img)
+
+    # Use OpenCV’s built-in QR decoder
+    qr_detector = cv2.QRCodeDetector()
+    data, points, _ = qr_detector.detectAndDecode(img_np)
+
+    if data:
+        user_id = data.strip()
+        now = datetime.now()
+        date = now.strftime("%Y-%m-%d")
+        time_in = now.strftime("%H:%M:%S")
+
+        rating = "On Time" if now.time() <= official_time else "Late"
+
+        # Get user info
+        c.execute("SELECT name, group_name FROM users WHERE user_id = ?", (user_id,))
+        result = c.fetchone()
+
+        if result:
+            name, group_name = result
+            c.execute("SELECT * FROM attendance WHERE user_id=? AND date=?", (user_id, date))
+            if not c.fetchone():
+                c.execute("INSERT INTO attendance VALUES (?, ?, ?, ?, ?, ?)",
+                          (user_id, name, group_name, date, time_in, rating))
+                conn.commit()
+                st.success(f"✅ {name} ({group_name}) marked {rating} at {time_in}")
+            else:
+                st.info(f"🕒 {name} already scanned today.")
+        else:
+            st.error("❌ QR not registered.")
+    else:
+        st.warning("No QR code detected. Try again.")
+
 from PIL import Image
 import io
 import os
