@@ -29,35 +29,27 @@ st.markdown("<p style='text-align:center; color:gray;'>Track attendance trends, 
 if "page" not in st.session_state:
     st.session_state.page = "class_overview"
 
-# Center buttons
+# Center buttons with hover effect
 st.markdown("""
 <div style='text-align:center;'>
     <style>
-    .nav-btn {display:inline-block; margin:5px; padding:10px 20px; background-color:#4B0082; color:white; border:none; border-radius:8px; cursor:pointer;}
+    .nav-btn {display:inline-block; margin:5px; padding:10px 20px; background-color:#4B0082; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;}
     .nav-btn:hover {background-color:#6A0DAD;}
     </style>
 </div>
 """, unsafe_allow_html=True)
 
-col1, col2, col3, col4, col5 = st.columns(5)
+cols = st.columns(5)
+buttons = ["🏫 Class Overview", "👤 Individual Ratings", "📊 Overall Stats", "📈 Trends & Alerts", "🔥 Attendance Heatmap"]
+pages = ["class_overview", "individual_ratings", "overall_stats", "trends_alerts", "heatmap"]
 
-with col1:
-    if st.button("🏫 Class Overview"):
-        st.session_state.page = "class_overview"
-with col2:
-    if st.button("👤 Individual Ratings"):
-        st.session_state.page = "individual_ratings"
-with col3:
-    if st.button("📊 Overall Stats"):
-        st.session_state.page = "overall_stats"
-with col4:
-    if st.button("📈 Trends & Alerts"):
-        st.session_state.page = "trends_alerts"
-with col5:
-    if st.button("🔥 Attendance Heatmap"):
-        st.session_state.page = "heatmap"
+for col, btn, page_name in zip(cols, buttons, pages):
+    if col.button(btn):
+        st.session_state.page = page_name
 
-# --- PAGE CONTENT ---
+# --- PAGE LOGIC ---
+
+# ---------- CLASS OVERVIEW ----------
 if st.session_state.page == "class_overview":
     st.subheader("🏫 Class-Level Attendance")
     if df is not None:
@@ -83,39 +75,8 @@ if st.session_state.page == "class_overview":
     else:
         st.info("⬅️ Upload a dataset to visualize class attendance.")
 
-# -------------------------------
-# TAB 1: CLASS OVERVIEW
-# -------------------------------
-with tab_class:
-    st.subheader("🏫 Class-Level Attendance")
-    if df is not None:
-        required_cols = ["employee_id", "name", "status", "date"]
-        if not all(col in df.columns for col in required_cols):
-            st.error(f"⚠️ Missing columns! Required: {required_cols}")
-        else:
-            if "class" in df.columns:
-                selected_class = st.selectbox("🎓 Select Class", sorted(df["class"].unique()))
-                class_df = df[df["class"] == selected_class]
-                st.dataframe(class_df, use_container_width=True, height=350)
-
-                class_summary = class_df["status"].value_counts().reset_index()
-                class_summary.columns = ["Status", "Count"]
-
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.plotly_chart(px.pie(class_summary, names="Status", values="Count", title="Status Distribution"), use_container_width=True)
-                with col2:
-                    st.plotly_chart(px.bar(class_summary, x="Status", y="Count", color="Status", title="Attendance Count"), use_container_width=True)
-            else:
-                st.warning("⚠️ Dataset has no 'class' column.")
-    else:
-        st.info("⬅️ Upload a dataset to visualize class attendance.")
-
-.
-# -------------------------------
-# TAB 2: INDIVIDUAL RATINGS
-# -------------------------------
-with tab_individual:
+# ---------- INDIVIDUAL RATINGS ----------
+elif st.session_state.page == "individual_ratings":
     st.subheader("👤 Employee Attendance Rating & Streaks")
     if df is not None:
         rating_map = {"Absent": 1, "Late": 2, "On Time": 3}
@@ -156,10 +117,8 @@ with tab_individual:
     else:
         st.info("⬅️ Upload a dataset to view ratings and streaks.")
 
-# -------------------------------
-# TAB 3: OVERALL STATS
-# -------------------------------
-with tab_overall:
+# ---------- OVERALL STATS ----------
+elif st.session_state.page == "overall_stats":
     st.subheader("📊 Overall Attendance Stats")
     if df is not None:
         overall_summary = df["status"].value_counts().reset_index()
@@ -178,10 +137,8 @@ with tab_overall:
     else:
         st.info("⬅️ Upload a dataset to see overall analytics.")
 
-# -------------------------------
-# TAB 4: TRENDS & ALERTS
-# -------------------------------
-with tab_trends:
+# ---------- TRENDS & ALERTS ----------
+elif st.session_state.page == "trends_alerts":
     st.subheader("📈 Attendance Trends & Alerts")
     if df is not None:
         df["date"] = pd.to_datetime(df["date"])
@@ -195,14 +152,11 @@ with tab_trends:
     else:
         st.info("⬅️ Upload a dataset to see trends and alerts.")
 
-# -------------------------------
-# TAB 5: HEATMAP
-# -------------------------------
-with tab_heatmap:
+# ---------- HEATMAP ----------
+elif st.session_state.page == "heatmap":
     st.subheader("🔥 Attendance Heatmap (Employee vs Date)")
     if df is not None:
         df["date"] = pd.to_datetime(df["date"])
-        # Convert status to numeric for heatmap (On Time=1, Late/Absent=0)
         df['on_time_flag'] = df['status'] == 'On Time'
         heatmap_data = df.pivot_table(index='name', columns='date', values='on_time_flag', fill_value=0)
         fig = px.imshow(heatmap_data, color_continuous_scale="YlGnBu",
