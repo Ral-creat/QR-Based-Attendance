@@ -2,7 +2,6 @@ import streamlit as st
 import qrcode
 import sqlite3
 import pandas as pd
-import cv2
 import numpy as np
 from datetime import datetime
 from pyzbar.pyzbar import decode
@@ -48,9 +47,10 @@ if choice == "🏠 Home":
     st.subheader("Welcome 👋")
     st.write("""
         This system tracks attendance using **QR codes**,  
-        automatically rates each scan (✅ On Time / ⚠️ Late),  
-        and shows analytics for groups and punctuality trends.
+        automatically rates each scan as **On Time** or **Late**,  
+        and provides analytics per group and overall attendance trends.
     """)
+    st.info("Use the sidebar to navigate between pages.")
 
 # ---------- REGISTER USER ----------
 elif choice == "🧍 Register User":
@@ -77,7 +77,7 @@ elif choice == "🧍 Register User":
             st.download_button("📥 Download QR Code", data=open(qr_path, "rb"),
                                file_name=f"{user_id}.png")
         else:
-            st.warning("Please fill out all fields.")
+            st.warning("Please fill out all fields before generating QR.")
 
 # ---------- SCAN ATTENDANCE ----------
 elif choice == "📱 Scan Attendance":
@@ -132,7 +132,7 @@ elif choice == "📊 Dashboard":
         st.info("No attendance records yet.")
     else:
         # Show raw data
-        with st.expander("📋 View Raw Attendance Data"):
+        with st.expander("📋 View Attendance Records"):
             st.dataframe(df)
 
         # --- Chart 1: Attendance Count by Group ---
@@ -149,7 +149,7 @@ elif choice == "📊 Dashboard":
                       title="On-Time vs Late Attendance", color_discrete_sequence=px.colors.qualitative.Set3)
         st.plotly_chart(fig2, use_container_width=True)
 
-        # --- Chart 3: Attendance Over Time ---
+        # --- Chart 3: Attendance Trend ---
         trend = df.groupby("date")["user_id"].count().reset_index()
         trend.columns = ["Date", "Total Attendance"]
         fig3 = px.line(trend, x="Date", y="Total Attendance",
