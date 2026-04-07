@@ -79,21 +79,19 @@ if st.session_state.attendance_df is not None:
         class_summary["Total Present"] / total_students * 100
     )
 
-    # =========================
-    # 📊 DASHBOARD TAB
-    # =========================
-    with tabs[0]:
-        st.subheader("📊 Overall Dashboard")
-        avg_rate = student_summary["Attendance Rate (%)"].mean()
+   # Dashboard Tab
+with tabs[0]:
+    st.subheader("📊 Overall Dashboard")
+    avg_rate = student_summary["Attendance Rate (%)"].mean()
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("👥 Students", total_students)
-        col2.metric("📚 Classes (Month)", total_classes)
-        col3.metric("📈 Overall Attendance", f"{avg_rate:.2f}%")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("👥 Students", total_students)
+    col2.metric("📚 Classes (Month)", total_classes)
+    col3.metric("📈 Overall Attendance", f"{avg_rate:.2f}%")
 
-        # Remove bar chart, show only table
-        st.subheader("📄 Attendance Records")
-        st.dataframe(df_month[['Name','Date','Days Present','Attendance Rate (%)']], use_container_width=True)
+    # Fix: show student summary table instead of df_month with missing columns
+    st.subheader("📄 Attendance Records (Per Student)")
+    st.dataframe(student_summary.sort_values("Attendance Rate (%)", ascending=False), use_container_width=True)
 
     # =========================
     # 👤 PER STUDENT TAB
