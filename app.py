@@ -6,6 +6,7 @@ from io import BytesIO
 # PAGE CONFIG
 # =========================
 st.set_page_config(page_title="📚 Attendance Monitoring", layout="wide")
+
 st.title("📚 Scholar Attendance Monitoring System")
 
 # =========================
@@ -43,7 +44,7 @@ tabs = st.tabs([
     "👤 Per Student",
     "📚 Per Class",
     "📅 Monthly",
-    "📥 Database Report"
+    "📥 Reports"
 ])
 
 # =========================
@@ -75,66 +76,77 @@ if st.session_state.attendance_df is not None:
     # =========================
     class_summary = df_month.groupby("Date")["Name"].count().reset_index()
     class_summary.columns = ["Class Date", "Total Present"]
+
     class_summary["Attendance Rate (%)"] = (
         class_summary["Total Present"] / total_students * 100
     )
 
-   # Dashboard Tab
-with tabs[0]:
-    st.subheader("📊 Overall Dashboard")
-    avg_rate = student_summary["Attendance Rate (%)"].mean()
+    # =========================
+    # 📊 DASHBOARD TAB
+    # =========================
+    with tabs[0]:
+        st.subheader("📊 Overall Dashboard")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("👥 Students", total_students)
-    col2.metric("📚 Classes (Month)", total_classes)
-    col3.metric("📈 Overall Attendance", f"{avg_rate:.2f}%")
+        avg_rate = student_summary["Attendance Rate (%)"].mean()
 
-    # Fix: show student summary table instead of df_month with missing columns
-    st.subheader("📄 Attendance Records (Per Student)")
-    st.dataframe(student_summary.sort_values("Attendance Rate (%)", ascending=False), use_container_width=True)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("👥 Students", total_students)
+        col2.metric("📚 Classes (Month)", total_classes)
+        col3.metric("📈 Overall Attendance", f"{avg_rate:.2f}%")
+
+        st.subheader("📈 Overall Attendance Graph")
+        st.bar_chart(student_summary.set_index("Name")["Attendance Rate (%)"])
 
     # =========================
     # 👤 PER STUDENT TAB
     # =========================
     with tabs[1]:
         st.subheader("👤 Attendance per Student")
+
         sorted_df = student_summary.sort_values("Attendance Rate (%)", ascending=False)
         st.dataframe(sorted_df, use_container_width=True)
-        # Removed bar chart
+
+        st.bar_chart(sorted_df.set_index("Name")["Attendance Rate (%)"])
 
     # =========================
     # 📚 PER CLASS TAB
     # =========================
     with tabs[2]:
         st.subheader("📚 Attendance per Class")
+
         st.dataframe(class_summary, use_container_width=True)
-        # Removed line chart
+
+        st.line_chart(class_summary.set_index("Class Date")["Total Present"])
 
     # =========================
     # 📅 MONTHLY TAB
     # =========================
     with tabs[3]:
         st.subheader("📅 Monthly Attendance Summary")
+
         st.write(f"Total Classes this Month: **{total_classes}** (Expected: 2 Saturdays)")
+
+        avg_rate = student_summary["Attendance Rate (%)"].mean()
+
         st.metric("📊 Monthly Average Attendance", f"{avg_rate:.2f}%")
-        st.dataframe(class_summary[['Class Date','Attendance Rate (%)']], use_container_width=True)
-        # Removed bar chart
+
+        st.bar_chart(class_summary.set_index("Class Date")["Attendance Rate (%)"])
 
     # =========================
-    # 📥 DATABASE REPORT TAB
+    # 📥 REPORTS TAB
     # =========================
     with tabs[4]:
-        st.subheader("📥 All Month Attendance Database")
-        st.dataframe(df, use_container_width=True)
+        st.subheader("📥 Download Reports")
 
-        # Download all month data
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name="All Months", index=False)
+            student_summary.to_excel(writer, sheet_name="Student Summary", index=False)
+            class_summary.to_excel(writer, sheet_name="Class Summary", index=False)
+
         st.download_button(
-            "📥 Download Full Database",
+            "📥 Download Excel Report",
             data=output.getvalue(),
-            file_name="attendance_all_months.xlsx",
+            file_name=f"attendance_{selected_month}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
