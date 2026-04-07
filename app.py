@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import matplotlib.pyplot as plt
 from io import BytesIO
 
 st.set_page_config(page_title="PHX47 Attendance Management System", layout="wide")
@@ -35,13 +35,11 @@ if uploaded_file:
             st.header("📊 Overall Attendance Dashboard")
 
             overall_counts = df['Status'].value_counts()
-            fig = px.pie(
-                names=overall_counts.index,
-                values=overall_counts.values,
-                title="Overall Attendance Percentage",
-                color_discrete_sequence=px.colors.sequential.RdBu
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            # Pie chart using matplotlib
+            fig, ax = plt.subplots()
+            ax.pie(overall_counts.values, labels=overall_counts.index, autopct='%1.1f%%', colors=['#1f77b4','#ff7f0e'])
+            ax.set_title("Overall Attendance Percentage")
+            st.pyplot(fig)
 
             st.markdown(f"**Total Students:** {df['ID'].nunique()}")
             st.markdown(f"**Total Attendance Records:** {len(df)}")
@@ -65,9 +63,6 @@ if uploaded_file:
             class_summary = df.groupby(['Class','ID','Name']).agg(
                 Days_Present=('Status', lambda x: (x=='Present').sum()),
                 Days_Absent=('Status', lambda x: (x=='Absent').sum())
-            ).reset_index()
-            class_total = class_summary.groupby('Class').agg(
-                Class_Attendance_Rate=('Days_Present', 'sum')
             ).reset_index()
             st.dataframe(class_summary, use_container_width=True)
 
